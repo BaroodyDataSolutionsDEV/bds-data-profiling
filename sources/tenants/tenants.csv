@@ -1,0 +1,62 @@
+tenant_id,company_name,industry,num_employees
+1,Harrell LLC,Marketing,6
+2,"Romero, Gonzalez and Brooks",Manufacturing,395
+3,Ryan PLC,Healthcare,59
+4,George Group,Manufacturing,264
+5,Rodriguez LLC,Retail,395
+6,Allen-Allen,Healthcare,403
+7,"Arroyo, Miller and Tucker",Technology,255
+8,Spence PLC,Technology,190
+9,Anderson Group,Manufacturing,128
+10,"Martin, Rose and Obrien",Finance,253
+11,Hickman Ltd,Finance,277
+12,"Harris, Collins and Carney",Healthcare,248
+13,"Brooks, Lam and Hayes",Healthcare,451
+14,Walker LLC,Marketing,480
+15,Chapman and Sons,Retail,209
+16,"Robinson, Jones and Welch",Legal,269
+17,Jones Inc,Logistics,120
+18,Jones-Young,Finance,306
+19,"Washington, Ryan and Cummings",Retail,8
+20,"Johnston, Sanchez and Kennedy",Finance,35
+21,Lee-Davis,,21
+22,Gomez-Jenkins,Legal,126
+23,"Brown, Valdez and Lucas",Manufacturing,114
+24,Powell LLC,Healthcare,456
+25,Wright and Sons,Logistics,247
+26,"West, Henderson and Ramirez",Marketing,54
+27,Baxter Inc,Marketing,215
+28,Morton-Chase,Logistics,32
+29,Williams PLC,,377
+30,Novak and Sons,Legal,60
+31,Russell Group,Retail,279
+32,Hancock Inc,Logistics,98
+33,Gray Group,Manufacturing,452
+34,House-Glover,Finance,446
+35,Henderson-Bernard,,281
+36,"Stanley, Tucker and Lee",Technology,479
+37,Novak PLC,Retail,253
+38,"Daniels, Adkins and Brown",Logistics,210
+39,"Woods, Calhoun and Schmidt",Technology,6
+40,Yu Inc,Marketing,406
+41,Jones Inc,Logistics,361
+42,"Hensley, Powell and David",Logistics,156
+43,"Sanchez, Wheeler and Harvey",Retail,301
+44,Sandoval-Cunningham,Technology,34
+45,Donovan-Harris,Technology,262
+46,"Edwards, Baker and Anderson",,265
+47,"Evans, Stewart and Walton",Finance,40
+48,Smith PLC,Finance,125
+49,"Ferrell, Jones and Lewis",Marketing,460
+50,Anderson-Bailey,Retail,25
+51,Suarez LLC,Finance,303
+52,Moore-Bass,Legal,109
+53,"Turner, Riggs and Roman",Legal,207
+54,"Smith, Montoya and Evans",Healthcare,158
+55,"Garcia, Humphrey and Baker",Logistics,389
+56,Newton and Sons,,323
+57,Campbell-Clark,Finance,114
+58,Harris-Walters,Manufacturing,183
+59,Wagner-King,Finance,194
+60,Davis Group,Manufacturing,431
+1,Harrell LLC,Marketing,6
