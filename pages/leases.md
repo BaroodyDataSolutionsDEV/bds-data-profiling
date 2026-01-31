@@ -18,7 +18,7 @@ select * from leases.leases
 | notes | unstructured text | text input associated with the lease |
 
 
-## Table Structure Checks
+## Leases Data Profiling
 
 ### 1. Row Level Checks
 
