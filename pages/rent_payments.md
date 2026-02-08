@@ -118,6 +118,11 @@ from rent_payments
     <Column id=lease_id_cross_check contentType=html align=center />
 </DataTable>
 
+```rp_lease_id_cross_check_pct
+select sum(case when lease_id in (select lease_id from leases) then 1 else 0 end) / count(*) pct
+from rent_payments
+```
+<BigValue data={rp_lease_id_cross_check_pct} value=pct title="lease_id's in leases table" fmt='pct'/>
 
 ## Data Consistency Checks
 
@@ -126,7 +131,7 @@ from rent_payments
 #### Earliest & Latest date values
 
 ```rp_payment_month_as_date
-select lease_id, cast(payment_month || '-01' as date) payment_month_date
+select lease_id, cast(payment_month || '-01' as date) payment_month_date, amount_due, amount_paid, payment_status
 from rent_payments
 ```
 
@@ -356,3 +361,178 @@ order by a.anchor_rn, a.rn
     <Column id=amount_paid contentType=html align=center />
     <Column id=payment_status contentType=html align=center />
 </DataTable>
+
+
+
+#### payment_month before lease_start_date or after lease_end_date
+
+```rp_payment_month_check
+select 
+    l.lease_id, 
+    cast(strftime(l.lease_start_date, '%Y-%m') || '-01' as date) lease_start_month_date,
+    cast(strftime(l.lease_end_date, '%Y-%m') || '-01' as date) lease_end_month_date,
+    rp.payment_month_date
+from ${rp_payment_month_as_date} rp
+    inner join leases l on l.lease_id = rp.lease_id
+```
+
+```rp_payment_month_before_start_date
+select count(*) total
+from ${rp_payment_month_check}
+where payment_month_date < lease_start_month_date
+```
+
+```rp_payment_month_after_end_date
+select count(*) total
+from ${rp_payment_month_check}
+where payment_month_date > lease_end_month_date
+```
+
+There are:
+    - <Value data={rp_payment_month_before_start_date} column=total /> rent_payment records with *payment_month* **before** *lease_start_date*
+    - <Value data={rp_payment_month_after_end_date} column=total /> rent_payment records with *payment_month* **after** *lease_end_date*
+
+
+#### Check if *amount_due* matches leases *monthlyRent*
+
+```rp_amt_due_monthlyRent
+select *
+from rent_payments rp
+    inner join leases l on rp.lease_id = l.lease_id
+where rp.amount_due != l.monthlyRent
+```
+
+All *amount_due* numbers in **rent_payments** match *monthlyRent* from **leases**
+
+
+
+
+### 8. Reasonableness Checks
+
+#### *payment_status* follows *amount_paid* vs. *amount_due*
+
+```rp_status_paid
+select lease_id, amount_due, amount_paid, lower(payment_status) payment_status_lower,
+    case 
+        when amount_paid > amount_due then 'over'
+        when amount_paid < amount_due then 'under'
+        when amount_paid = amount_due then 'equal'
+        when amount_paid is null or amount_due is null then 'null'
+    end payment_coverage
+from rent_payments
+```
+
+```rp_status_coverage_summary
+select payment_status_lower, payment_coverage, count(*) total
+from ${rp_status_paid}
+group by payment_status_lower, payment_coverage
+order by 1, 2
+```
+
+<DataTable data={rp_status_coverage_summary} groupBy=payment_status_lower rowShading=true>
+    <Column id=payment_coverage title="Payment Coverage" />
+    <Column id=total title="Occurrences" />
+</DataTable>
+
+
+```rp_payment_status_dd_options
+select distinct payment_status_lower
+from ${rp_status_paid}
+```
+<Dropdown data={rp_payment_status_dd_options} name=rp_status_dd value=payment_status_lower>
+    <DropdownOption value="%" valueLabel="All" />
+</Dropdown>
+
+<Dropdown name=rp_coverage_dd>
+    <DropdownOption value="%" valueLabel="All" />
+    <DropdownOption value="over" />
+    <DropdownOption value="under" />
+    <DropdownOption value="equal" />
+    <DropdownOption value="null" />
+</Dropdown>
+
+```sql rp_payment_coverage
+    select *, 
+        case 
+            when payment_status_lower = 'late' then '<span style="color: yellow;">Late</span>'
+            when payment_status_lower = 'missed' then '<span style="color: red;">Missed</span>' 
+            when payment_status_lower = 'paid' then '<span style="color: green;">Paid</span>'
+        end payment_status_html,
+        case 
+            when payment_coverage = 'over' then '<span style="color: yellow;">Over</span>'
+            when payment_coverage = 'under' then '<span style="color: red;">Under</span>'
+            when payment_coverage = 'equal' then '<span style="color: green;">Equal</span>'
+            when payment_coverage = 'null' then '<span style="color: blue;">Null</span>'
+        end payment_coverage_html, 
+    from ${rp_status_paid}
+    where payment_status_lower like '${inputs.rp_status_dd.value}'
+        and payment_coverage like '${inputs.rp_coverage_dd.value}'
+    order by lease_id, payment_status_lower, payment_coverage
+```
+
+<DataTable data={rp_payment_coverage} rowShading=true>
+    <Column id=lease_id />
+    <Column id=amount_due />
+    <Column id=amount_paid />
+    <Column id=payment_status_html title="Payment Status" contentType=html align=center />
+    <Column id=payment_coverage_html title="Payment Coverage" contentType=html align=center/>
+</DataTable>
+
+
+
+#### **rent_payment** record exists for each month of active *lease_id*
+
+```sql rp_active_lease_months
+    select
+        l.lease_id, l.lease_start_date, l.max_rp_month,
+        date_trunc('month', d) as month_start
+    from (select *, (select max(payment_month_date) from ${rp_payment_month_as_date}) max_rp_month from leases) l
+        cross join generate_series(
+            date_trunc('month', l.lease_start_date),
+            date_trunc('month', l.max_rp_month),
+            interval 1 month
+        ) as t(d)
+    order by lease_id, month_start
+```
+
+```sql rp_active_lease_months_check
+    select a.lease_id, a.month_start, 
+        case when b.payment_month_date is null then 'null' else strftime(b.payment_month_date, '%Y-%m-%d') end payment_month_date
+    from ${rp_active_lease_months} a
+        left join ${rp_payment_month_as_date} b on a.lease_id = b.lease_id
+            and a.month_start = b.payment_month_date
+    where b.payment_month_date is null
+    order by a.lease_id, a.month_start 
+```
+
+```sql rp_active_lease_months_check_records
+    select l.lease_id, l.lease_start_date, l.max_rp_month, l.month_start, 
+        case 
+            when rp.payment_month_date is null then 'null' 
+            else strftime(rp.payment_month_date, '%Y-%m-%d') 
+        end payment_month_date, 
+        rp.amount_due, rp.amount_paid, rp.payment_status
+    from ${rp_active_lease_months} l
+        left join ${rp_payment_month_as_date} rp on  l.lease_id = rp.lease_id
+            and l.month_start = rp.payment_month_date
+    where l.lease_id in (select lease_id from ${rp_active_lease_months_check})
+    order by l.lease_id, l.month_start
+```
+
+```sql rp_active_lease_months_missing_summary
+select lease_id, count(*) active_lease_months_missing_rent_payment_data
+from ${rp_active_lease_months_check_records}
+where payment_month_date = 'null'
+group by lease_id
+order by 2 desc
+```
+
+<DataTable data={rp_active_lease_months_missing_summary} rowShading=true rowNumbers=true />
+
+<Dropdown data={rp_active_lease_months_missing_summary} name=lease_months_missing_rp value=lease_id />
+
+```sql rp_active_lease_months_missing_summary_dt_data
+select lease_id, lease_start_date, max_rp_month, case when payment_month_date = 'null' then '-' else payment_month_date end payment_month_date, payment_status  
+from ${rp_active_lease_months_check_records} where lease_id = ${inputs.lease_months_missing_rp.value} order by lease_id, month_start
+```
+<DataTable data={rp_active_lease_months_missing_summary_dt_data} rowShading=true />
