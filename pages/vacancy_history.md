@@ -197,14 +197,56 @@ select vacancy_rate from vacancy_history
 />
 
 ```sql linechart_vh_pid_month_rate
-select *
-from ${vh_month_as_date}
-where property_id in ${inputs.prop_multi.value}
+select vh.*
+from ${vh_month_as_date} vh
+where vh.property_id in ${inputs.prop_multi.value}
 ```
+
+```sql linechart_annotations
+    select 
+        l.property_id,
+        cast(strftime(lease_start_date, '%Y-%m') || '-01' as date) lease_start_month,
+        vh.vacancy_rate,
+        strftime(lease_start_date, '%Y-%m') lease_label
+    from ${linechart_vh_pid_month_rate} vh
+        inner join leases l on vh.property_id = l.property_id and cast(strftime(l.lease_start_date, '%Y-%m') || '-01' as date) = vh.month_as_date
+```
+
 <LineChart 
     data={linechart_vh_pid_month_rate}
     x=month_as_date
     y=vacancy_rate
     yAxisTitle="Vacancy Rate by Month"
     series=property_id
-/>
+    subtitle="Reference points indicate lease_start_date from a valid record in the leases table"
+>
+    <ReferencePoint data={linechart_annotations} x=lease_start_month y=vacancy_rate label=lease_label labelPosition=bottom color=info />
+</LineChart>
+
+
+### 6. Text Field Profiling
+
+No text fields
+
+
+## Business Logic & Reasonableness Check
+
+### 7. Logical Checks
+
+```sql vh_100
+select sum(case when vacancy_rate > 1 then 1 else 0 end) *1.0 / count(*) pct
+from vacancy_history
+```
+
+```sql vh_0
+select sum(case when vacancy_rate < 0 then 1 else 0 end) *1.0 / count(*) pct
+from vacancy_history
+```
+
+- **<Value data={vh_100} column=pct fmt=pct />** records with vacancy_rate greater than 100%
+- **<Value data={vh_0} column=pct fmt=pct />** records with vacancy_rate less than 0%
+
+
+### 8. Reasonableness Checks
+
+*see interactive chart above for vacancy_history trend as leases become active*
